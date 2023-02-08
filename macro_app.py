@@ -32,8 +32,7 @@ futures_cols = st.columns(len(futures))
 
 for i, future in enumerate(futures_names):
     future_info = yf.Ticker(futures_yf_code[i]).fast_info
-    price_change_pct = ((future_info["last_price"] - future_info["previous_close"]) / future_info[
-        "previous_close"]) * 100
+    price_change_pct = (future_info["last_price"] / future_info["previous_close"] - 1) * 100
     futures_cols[i].metric(label=future, value=f'{future_info["last_price"]:.2f}', delta=f'{price_change_pct:.2f}%')
 
 st.markdown('---')
