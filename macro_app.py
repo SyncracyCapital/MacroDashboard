@@ -69,12 +69,12 @@ with indices_cols[0]:
     st.subheader('Major Indices')
     st.dataframe(returns.loc[index_cols[:6]].style.format(df_styler_dict).applymap(highlight_percent_returns,
                                                                                    subset=['24hr %', '7d %', '30d %']),
-                 width=500)
+                 width=1000)
 
 with indices_cols[1]:
     st.subheader('Equity Style Indices')
     st.dataframe(returns.loc[index_cols[6:]].style.format(df_styler_dict).applymap(highlight_percent_returns,
                                                                                    subset=['24hr %', '7d %', '30d %']),
-                 width=500)
+                 width=1000)
 
 st.markdown('---')
