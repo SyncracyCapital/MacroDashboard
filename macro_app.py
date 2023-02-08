@@ -55,7 +55,7 @@ returns['24h Vol'] = indices_volume.iloc[-1]
 returns = returns[['Price', '24h Vol', '24hr %', '7d %', '30d %']]
 
 # Format the table
-df_styler_dict = {'Price': '${:,.2f}',
+df_styler_dict = {'Primace': '${:,.2f}',
                   '24h Vol': big_number_formatter,
                   '24hr %': '{:.2f}%',
                   '7d %': '{:.2f}%',
