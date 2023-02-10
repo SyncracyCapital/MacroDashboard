@@ -1,7 +1,15 @@
+from datetime import datetime
+
 import streamlit as st
 import yfinance as yf
 
+import plotly.express as px
+
 from utils import compute_returns, big_number_formatter, highlight_percent_returns
+
+from fredapi import Fred
+
+fred = Fred(api_key='6a118a0ce0c76a5a1d1ad052a65162d6')
 
 # App configuration
 st.set_page_config(
@@ -37,6 +45,7 @@ for i, future in enumerate(futures_names):
 
 st.markdown('---')
 
+st.spinner('Loading data...')
 # Equity indices data
 indices_tickers = ['^IXIC', '^GSPC', '^DJI', '^FTSE', '^N225', '^AXJO', '^RAG', '^RAV', '^RUI', '^RUT', 'ARKK']
 index_cols = ['NASDAQ', 'S&P 500', 'Dow Jones', 'FTSE (UK)', 'Nikkei (JPY)', 'ASX 200', 'Russell 3000 Growth',
@@ -52,6 +61,30 @@ returns = indices_adj_close.apply(compute_returns, axis=0).T
 returns.columns = ['Price', '24hr %', '7d %', '30d %']
 returns['24h Vol'] = indices_volume.iloc[-1]
 returns = returns[['Price', '24h Vol', '24hr %', '7d %', '30d %']]
+
+# Equity Style Data
+stock_market_start_date = '1980-12-31'
+stock_market_end_date = datetime.today().strftime('%Y-%m-%d')
+tickers_to_names_map = {'^RAG': 'Russell 3000 Growth',
+                        '^RAV': 'Russell 3000 Value',
+                        '^RUI': 'Russell 1000 Large-Cap',
+                        '^RUT': 'Russell 2000 Small-Cap'}
+stock_market_data = yf.download(tickers=list(tickers_to_names_map.keys()), start=stock_market_start_date,
+                                end=stock_market_end_date)['Close']
+stock_market_data.columns = [tickers_to_names_map[ticker] for ticker in list(stock_market_data.columns)]
+
+# growth/value ratio
+stock_market_data['Growth/Value Ratio'] = stock_market_data['Russell 3000 Growth'] / stock_market_data[
+    'Russell 3000 Value']
+
+# large-cap/small-cap ratio
+stock_market_data['Large-cap/Small-cap Ratio'] = stock_market_data['Russell 1000 Large-Cap'] / stock_market_data[
+    'Russell 2000 Small-Cap']
+
+# DXY, 10Y, 10Y-2Y
+dxy_df = yf.download(tickers='DX-Y.NYB', start=stock_market_start_date, end=stock_market_end_date)['Close']
+ten_year_df = fred.get_series('DGS10').fillna(method='ffill')
+ten_minus_two_df = fred.get_series('T10Y2Y').fillna(method='ffill')
 
 # Format the table
 df_styler_dict = {'Price': '${:,.2f}',
@@ -75,5 +108,63 @@ with indices_cols[1]:
     st.dataframe(returns.loc[index_cols[6:]].style.format(df_styler_dict).applymap(highlight_percent_returns,
                                                                                    subset=['24hr %', '7d %', '30d %']),
                  width=1000)
+
+st.markdown('---')
+
+differential_cols = st.columns(2)
+
+with differential_cols[0]:
+    st.subheader('Growth/Value Ratio')
+    st.write("""Note: Growth sells off versus Value when rates are rising but then outperforms in
+             a recession. The relationship will tell whether market is expecting higher rates or weaker economy - 
+             inflation or hard landing""")
+    fig = px.line(stock_market_data['Growth/Value Ratio'].dropna())
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_layout(showlegend=False, xaxis_title=None)
+    fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot",
+                  x0=0, x1=1, xref="paper", y0=1, y1=1, yref="y")
+    st.plotly_chart(fig, use_container_width=True)
+
+with differential_cols[1]:
+    st.subheader('Large-cap/Small-cap Ratio')
+    fig = px.line(stock_market_data['Large-cap/Small-cap Ratio'].dropna())
+    st.write('Note: Small-Caps sells off relative to Large-Cap going into recession')
+    st.markdown('###')  # add space
+    st.markdown('###')  # add space
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_yaxes(dtick=0.1)
+    fig.update_layout(showlegend=False, xaxis_title=None)
+    fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot",
+                  x0=0, x1=1, xref="paper", y0=1, y1=1, yref="y")
+    st.plotly_chart(fig, use_container_width=True)
+
+st.markdown('---')
+
+# DXY, 10Y and 10Y-2Y
+dxy, ten_year, ten_minus_two = st.columns(3)
+
+with dxy:
+    st.subheader('US Dollar Index')
+    fig = px.line(dxy_df)
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_yaxes(tickprefix="$")
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Price')
+    st.plotly_chart(fig, use_container_width=True)
+
+with ten_year:
+    st.subheader('10-Year Treasury Constant Maturity')
+    fig = px.line(ten_year_df)
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_yaxes(ticksuffix="%")
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Yield')
+    st.plotly_chart(fig, use_container_width=True)
+
+with ten_minus_two:
+    st.subheader('10-Year Minus 2-Year Spread')
+    fig = px.line(ten_minus_two_df)
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_yaxes(ticksuffix="%")
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Spread')
+    st.plotly_chart(fig, use_container_width=True)
 
 st.markdown('---')
