@@ -35,7 +35,7 @@ futures = ['ES', 'NQ', 'YM', 'NKD', 'CL', 'GC']
 futures_yf_code = [f'{x}=F' for x in futures]
 futures_names = ['S&P 500', 'NASDAQ 100', 'Dow Jones', 'Nikkei (JPY)', 'WTI Crude Oil', 'Gold']
 
-st.subheader('Futures (24h %)')
+st.subheader('Futures (Latest %)')
 futures_cols = st.columns(len(futures))
 
 for i, future in enumerate(futures_names):
@@ -58,9 +58,9 @@ indices_adj_close.columns = index_cols
 indices_volume.columns = index_cols
 
 returns = indices_adj_close.apply(compute_returns, axis=0).T
-returns.columns = ['Price', '24hr %', '7d %', '30d %']
-returns['24h Vol'] = indices_volume.iloc[-1]
-returns = returns[['Price', '24h Vol', '24hr %', '7d %', '30d %']]
+returns.columns = ['Price', 'Latest %', '7d %', '30d %']
+returns['Vol'] = indices_volume.iloc[-1]
+returns = returns[['Price', 'Latest %', '24hr %', '7d %', '30d %']]
 
 # Equity Style Data
 stock_market_start_date = '1980-12-31'
@@ -88,8 +88,8 @@ ten_minus_two_df = fred.get_series('T10Y2Y').fillna(method='ffill')
 
 # Format the table
 df_styler_dict = {'Price': '${:,.2f}',
-                  '24h Vol': big_number_formatter,
-                  '24hr %': '{:.2f}%',
+                  'Vol': big_number_formatter,
+                  'Latest %': '{:.2f}%',
                   '7d %': '{:.2f}%',
                   '30d %': '{:.2f}%'}
 
