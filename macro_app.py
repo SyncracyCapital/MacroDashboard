@@ -4,6 +4,8 @@ import streamlit as st
 import yfinance as yf
 
 import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 from utils import compute_returns, big_number_formatter, highlight_percent_returns
 
@@ -68,9 +70,13 @@ stock_market_end_date = datetime.today().strftime('%Y-%m-%d')
 tickers_to_names_map = {'^RAG': 'Russell 3000 Growth',
                         '^RAV': 'Russell 3000 Value',
                         '^RUI': 'Russell 1000 Large-Cap',
-                        '^RUT': 'Russell 2000 Small-Cap'}
+                        '^RUT': 'Russell 2000 Small-Cap',
+                        '^VIX': 'VIX',
+                        'DX-Y.NYB': 'DXY',
+                        '^GSPC': 'S&P 500'}
 stock_market_data = yf.download(tickers=list(tickers_to_names_map.keys()), start=stock_market_start_date,
                                 end=stock_market_end_date)['Close']
+stock_market_data.index = stock_market_data.index.tz_localize(None)
 stock_market_data.columns = [tickers_to_names_map[ticker] for ticker in list(stock_market_data.columns)]
 
 # growth/value ratio
@@ -82,9 +88,9 @@ stock_market_data['Large-cap/Small-cap Ratio'] = stock_market_data['Russell 1000
     'Russell 2000 Small-Cap']
 
 # DXY, 10Y, 10Y-2Y
-dxy_df = yf.download(tickers='DX-Y.NYB', start=stock_market_start_date, end=stock_market_end_date)['Close']
 ten_year_df = fred.get_series('DGS10').fillna(method='ffill')
 ten_minus_two_df = fred.get_series('T10Y2Y').fillna(method='ffill')
+m2 = fred.get_series('M2SL').to_frame(name='M2')
 
 # Format the table
 df_styler_dict = {'Price': '${:,.2f}',
@@ -147,7 +153,7 @@ dxy, ten_year, ten_minus_two = st.columns(3)
 
 with dxy:
     st.subheader('US Dollar Index')
-    fig = px.line(dxy_df)
+    fig = px.line(stock_market_data['DXY'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(tickprefix="$")
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Price')
@@ -168,5 +174,49 @@ with ten_minus_two:
     fig.update_yaxes(ticksuffix="%")
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Spread')
     st.plotly_chart(fig, use_container_width=True)
+
+st.markdown('---')
+
+st.write('VIX, Put/Call Ratio and Short Interest Ratio')
+
+st.markdown('---')
+
+# TODO
+# Move data transformation to the top
+
+liquidity_col = st.columns(1)
+m2 = m2.join(stock_market_data['S&P 500'], how='outer').dropna().pct_change(12).dropna() * 100
+
+with liquidity_col[0]:
+    st.subheader('S&P 500 vs M2 (YoY%)')
+    main_fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    fig_snp = px.line(m2['S&P 500'])
+    fig_snp.update_traces(line=dict(color="#5218fa"))
+    fig_snp.update_layout(xaxis_title=None)
+
+    fig_m2 = px.line(m2['M2'])
+    fig_m2.update_traces(yaxis="y2")
+    fig_m2.update_traces(line=dict(color='#C218F8'))
+    fig_m2.update_layout(xaxis_title=None)
+
+    main_fig.add_traces(fig_snp.data + fig_m2.data)  # noqa
+    main_fig.update_yaxes(ticksuffix="%")
+    main_fig.update_layout(legend=dict(title=None,
+                                       orientation="h",
+                                       y=1,
+                                       yanchor="bottom",
+                                       x=0.5,
+                                       xanchor="center"))
+    main_fig.update_yaxes(showgrid=False, showline=False, zeroline=False)
+    main_fig.update_xaxes(showgrid=False, showline=False, zeroline=False)
+
+    main_fig.layout.yaxis.title = "S&P 500 (YoY%)"
+    main_fig.layout.yaxis2.title = "M2 (YoY%)"
+
+    fig.update_yaxes(ticksuffix="%")
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='S&P 500 (YoY%)')
+
+    st.plotly_chart(main_fig, use_container_width=True, use_container_height=True)
 
 st.markdown('---')
