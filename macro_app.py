@@ -1,15 +1,15 @@
-from datetime import datetime
-
 import streamlit as st
 import yfinance as yf
 
 import plotly.express as px
 from plotly.subplots import make_subplots
-import plotly.graph_objects as go
 
-from utils import compute_returns, big_number_formatter, highlight_percent_returns
+from utils import big_number_formatter, highlight_percent_returns, pull_yf_data, \
+    pull_fred_data, compute_yf_data_returns, pull_pcr_data, add_recession_periods
 
 from fredapi import Fred
+
+SYNCRACY_COLORS = ['#5218F8', '#C218F8', '#F818BE']
 
 fred = Fred(api_key='6a118a0ce0c76a5a1d1ad052a65162d6')
 
@@ -47,50 +47,38 @@ for i, future in enumerate(futures_names):
 
 st.markdown('---')
 
-st.spinner('Loading data...')
-# Equity indices data
-indices_tickers = ['^IXIC', '^GSPC', '^DJI', '^FTSE', '^N225', '^AXJO', '^RAG', '^RAV', '^RUI', '^RUT', 'ARKK']
+yf_tickers_to_names_map = {'^IXIC': 'NASDAQ',
+                           '^GSPC': 'S&P 500',
+                           '^DJI': 'Dow Jones',
+                           '^FTSE': 'FTSE (UK)',
+                           '^N225': 'Nikkei (JPY)',
+                           '^AXJO': 'ASX 200',
+                           '^RAG': 'Russell 3000 Growth',
+                           '^RAV': 'Russell 3000 Value',
+                           '^RUI': 'Russell 1000 Large-Cap',
+                           '^RUT': 'Russell 2000 Small-Cap',
+                           'ARKK': 'ARKK Innovation ETF',
+                           '^VIX': 'VIX',
+                           'DX-Y.NYB': 'DXY'}
+
+fred_tickers_to_names_map = {'DGS10': '10Y',
+                             'T10Y2Y': '10Y-2Y',
+                             'M2SL': 'M2'}
+
 index_cols = ['NASDAQ', 'S&P 500', 'Dow Jones', 'FTSE (UK)', 'Nikkei (JPY)', 'ASX 200', 'Russell 3000 Growth',
               'Russell 3000 Value',
               'Russell 1000 Large-Cap', 'Russell 2000 Small-Cap', 'ARKK Innovation ETF']
-indices_df = yf.download(tickers=indices_tickers, period="30d", interval="1d")
-indices_adj_close = indices_df['Adj Close'][indices_tickers]
-indices_volume = indices_df['Volume'][indices_tickers].fillna(method='ffill')
-indices_adj_close.columns = index_cols
-indices_volume.columns = index_cols
 
-returns = indices_adj_close.apply(compute_returns, axis=0).T
-returns.columns = ['Price', 'Latest % return', '7d %', '30d %']
-returns['Vol'] = indices_volume.iloc[-1]
-returns = returns[['Price', 'Latest % return', '7d %', '30d %']]
+with st.spinner('Loading Market Data From Yahoo Finance...'):
+    stock_market_data = pull_yf_data(yf_tickers_to_names_map)
+    stock_market_data.index = stock_market_data.index.tz_localize(None)
+    returns = compute_yf_data_returns(stock_market_data)
 
-# Equity Style Data
-stock_market_start_date = '1980-12-31'
-stock_market_end_date = datetime.today().strftime('%Y-%m-%d')
-tickers_to_names_map = {'^RAG': 'Russell 3000 Growth',
-                        '^RAV': 'Russell 3000 Value',
-                        '^RUI': 'Russell 1000 Large-Cap',
-                        '^RUT': 'Russell 2000 Small-Cap',
-                        '^VIX': 'VIX',
-                        'DX-Y.NYB': 'DXY',
-                        '^GSPC': 'S&P 500'}
-stock_market_data = yf.download(tickers=list(tickers_to_names_map.keys()), start=stock_market_start_date,
-                                end=stock_market_end_date)['Close']
-stock_market_data.index = stock_market_data.index.tz_localize(None)
-stock_market_data.columns = [tickers_to_names_map[ticker] for ticker in list(stock_market_data.columns)]
+with st.spinner('Loading Market Data From FRED...'):
+    fred_data = pull_fred_data()
 
-# growth/value ratio
-stock_market_data['Growth/Value Ratio'] = stock_market_data['Russell 3000 Growth'] / stock_market_data[
-    'Russell 3000 Value']
-
-# large-cap/small-cap ratio
-stock_market_data['Large-cap/Small-cap Ratio'] = stock_market_data['Russell 1000 Large-Cap'] / stock_market_data[
-    'Russell 2000 Small-Cap']
-
-# DXY, 10Y, 10Y-2Y
-ten_year_df = fred.get_series('DGS10').fillna(method='ffill')
-ten_minus_two_df = fred.get_series('T10Y2Y').fillna(method='ffill')
-m2 = fred.get_series('M2SL').to_frame(name='M2')
+with st.spinner('Loading PCR Data From Alpha Query...'):
+    pcr_data = pull_pcr_data()
 
 # Format the table
 df_styler_dict = {'Price': '${:,.2f}',
@@ -131,6 +119,7 @@ with differential_cols[0]:
     fig.update_layout(showlegend=False, xaxis_title=None)
     fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot",
                   x0=0, x1=1, xref="paper", y0=1, y1=1, yref="y")
+    fig = add_recession_periods(fig, stock_market_data['Growth/Value Ratio'].dropna())
     st.plotly_chart(fig, use_container_width=True)
 
 with differential_cols[1]:
@@ -144,6 +133,7 @@ with differential_cols[1]:
     fig.update_layout(showlegend=False, xaxis_title=None)
     fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot",
                   x0=0, x1=1, xref="paper", y0=1, y1=1, yref="y")
+    fig = add_recession_periods(fig, stock_market_data['Large-cap/Small-cap Ratio'].dropna())
     st.plotly_chart(fig, use_container_width=True)
 
 st.markdown('---')
@@ -157,35 +147,57 @@ with dxy:
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(tickprefix="$")
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Price')
+    fig = add_recession_periods(fig, stock_market_data['DXY'].dropna())
     st.plotly_chart(fig, use_container_width=True)
 
 with ten_year:
     st.subheader('10-Year Treasury Constant Maturity')
-    fig = px.line(ten_year_df)
+    fig = px.line(fred_data['10Y'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(ticksuffix="%")
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Yield')
+    fig = add_recession_periods(fig, fred_data['10Y'].dropna())
     st.plotly_chart(fig, use_container_width=True)
 
 with ten_minus_two:
     st.subheader('10-Year Minus 2-Year Spread')
-    fig = px.line(ten_minus_two_df)
+    fig = px.line(fred_data['10Y-2Y'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(ticksuffix="%")
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Spread')
+    fig = add_recession_periods(fig, fred_data['10Y-2Y'].dropna())
     st.plotly_chart(fig, use_container_width=True)
 
 st.markdown('---')
 
-st.write('VIX, Put/Call Ratio and Short Interest Ratio')
+vix, put_call_ratio = st.columns(2)
+
+with vix:
+    st.subheader('Volatility Index (VIX)')
+    fig = px.line(stock_market_data['VIX'].dropna())
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Spread')
+    fig = add_recession_periods(fig, stock_market_data['VIX'].dropna())
+    st.plotly_chart(fig, use_container_width=True)
+
+with put_call_ratio:
+    st.subheader('10-Day Average Put/Call Ratio (Volume)')
+    fig = px.line(pcr_data, color_discrete_sequence=SYNCRACY_COLORS)
+    fig.update_layout(xaxis_title=None, yaxis_title='Put/Call Ratio')
+    fig.update_layout(legend=dict(title=None,
+                                  orientation="h",
+                                  y=1,
+                                  yanchor="bottom",
+                                  x=0.5,
+                                  xanchor="center"))
+    fig = add_recession_periods(fig, pcr_data)
+    st.plotly_chart(fig, use_container_width=True)
 
 st.markdown('---')
 
-# TODO
-# Move data transformation to the top
-
 liquidity_col = st.columns(1)
-m2 = m2.join(stock_market_data['S&P 500'], how='outer').dropna().pct_change(12).dropna() * 100
+m2 = fred_data['M2'].to_frame(name='M2').join(stock_market_data['S&P 500'],
+                                              how='outer').resample('D').first().dropna().pct_change(12).dropna() * 100
 
 with liquidity_col[0]:
     st.subheader('S&P 500 vs M2 (YoY%)')
@@ -216,7 +228,7 @@ with liquidity_col[0]:
 
     fig.update_yaxes(ticksuffix="%")
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='S&P 500 (YoY%)')
-
+    main_fig = add_recession_periods(main_fig, m2)
     st.plotly_chart(main_fig, use_container_width=True, use_container_height=True)
 
 st.markdown('---')

@@ -58,6 +58,6 @@ webencodings==0.5.1
 wincertstore==0.2
 yfinance==0.2.9
 zipp==3.12.1
-
+openbb==2.4.1
 plotly~=5.13.0
 fredapi~=0.5.0
