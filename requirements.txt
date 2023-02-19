@@ -1,5 +1,4 @@
 yfinance==0.2.9
 openbb==2.4.1
 plotly~=5.13.0
-fredapi~=0.5.0
 pandas==1.5.3
