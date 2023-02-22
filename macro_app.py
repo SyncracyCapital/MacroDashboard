@@ -30,6 +30,9 @@ to the select few</i></p>"""
 
 st.markdown(markdown, unsafe_allow_html=True)
 
+st.write('#')
+st.write('[Crypto Dashboard](https://syncracycapital-the-eye-of-syncracy-analytics-app-jjgobl.streamlit.app/)')
+
 st.markdown('---')
 
 # Futures data
