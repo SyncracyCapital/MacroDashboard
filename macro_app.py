@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import streamlit as st
 import yfinance as yf
 
@@ -5,9 +7,12 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 
 from utils import big_number_formatter, highlight_percent_returns, pull_yf_data, \
-    pull_fred_data, compute_yf_data_returns, pull_pcr_data, add_recession_periods
+    pull_fred_data, compute_yf_data_returns, pull_pcr_data, add_recession_periods, fear_greed_data, \
+    fix_date_for_psycho_url
 
 from fredapi import Fred
+
+import pandas as pd
 
 SYNCRACY_COLORS = ['#5218F8', '#C218F8', '#F818BE']
 
@@ -30,9 +35,20 @@ to the select few</i></p>"""
 
 st.markdown(markdown, unsafe_allow_html=True)
 
-st.write('#')
-st.write('[Crypto Dashboard](https://syncracycapital-the-eye-of-syncracy-analytics-app-jjgobl.streamlit.app/)')
+# Psychological indicators and volume parameters
+today = datetime.today()
+ts = pd.Timestamp(str(today))
+offset = pd.tseries.offsets.BusinessDay(n=1)
+latest_business_day = today - offset
 
+year = fix_date_for_psycho_url(latest_business_day.year)
+day = fix_date_for_psycho_url(latest_business_day.day)
+month = fix_date_for_psycho_url(latest_business_day.month)
+psychological_indicators_and_volume_url = f"https://www.investors.com/wp-content/uploads/{year}/{month}/DailyPsycho_{month}{day}{year[-2:]}.pdf "
+
+st.write('#')
+st.write(f"""[Crypto Dashboard](https://syncracycapital-the-eye-of-syncracy-analytics-app-jjgobl.streamlit.app/) | 
+            [Psychological Indicators and Volume]({psychological_indicators_and_volume_url})""")
 st.markdown('---')
 
 # Futures data
@@ -69,8 +85,7 @@ fred_tickers_to_names_map = {'DGS10': '10Y',
                              'M2SL': 'M2'}
 
 index_cols = ['NASDAQ', 'S&P 500', 'Dow Jones', 'FTSE (UK)', 'Nikkei (JPY)', 'ASX 200', 'Russell 3000 Growth',
-              'Russell 3000 Value',
-              'Russell 1000 Large-Cap', 'Russell 2000 Small-Cap', 'ARKK Innovation ETF']
+              'Russell 3000 Value', 'Russell 1000 Large-Cap', 'Russell 2000 Small-Cap', 'ARKK Innovation ETF']
 
 with st.spinner('Loading Market Data From Yahoo Finance...'):
     stock_market_data = pull_yf_data(yf_tickers_to_names_map)
@@ -83,12 +98,48 @@ with st.spinner('Loading Market Data From FRED...'):
 with st.spinner('Loading PCR Data From Alpha Query...'):
     pcr_data = pull_pcr_data()
 
+with st.spinner('Loading Fear & Greed Index From CNN...'):
+    fear_and_greed_df = fear_greed_data()
+
 # Format the table
 df_styler_dict = {'Price': '${:,.2f}',
                   'Vol': big_number_formatter,
                   'Latest % return': '{:.2f}%',
                   '7d %': '{:.2f}%',
                   '30d %': '{:.2f}%'}
+
+# Fear and greed index
+st.subheader('Fear & Greed Index')
+
+latest_value, category = st.columns(2)
+
+with latest_value:
+    st.metric(label='Latest Value',
+              value=int(fear_and_greed_df['fear_metric'].iloc[-1]))
+
+with category:
+    st.metric(label='Category',
+              value=fear_and_greed_df['rating'].iloc[-1].capitalize())
+
+fear_and_greed_chart = st.columns(1)
+
+with fear_and_greed_chart[0]:
+    fig = px.line(fear_and_greed_df['fear_metric'].dropna())
+    fig.update_traces(line=dict(color="#5218fa"))
+    fig.update_layout(showlegend=False, xaxis_title=None)
+
+    fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot",
+                  x0=0, x1=1, xref="paper", y0=25, y1=25, yref="y")
+    fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot",
+                  x0=0, x1=1, xref="paper", y0=75, y1=75, yref="y")
+
+    fig.add_annotation(x=0.1, y=22, xref="paper", yref="y",
+                       text="Extreme Fear", showarrow=False, font=dict(color="red"))
+    fig.add_annotation(x=0.1, y=78, xref="paper", yref="y",
+                       text="Extreme Greed", showarrow=False, font=dict(color="red"))
+    st.plotly_chart(fig, use_container_width=True)
+
+st.markdown('---')
 
 # Indices tables
 indices_cols = st.columns(2)
@@ -117,6 +168,9 @@ with differential_cols[0]:
     st.write("""Note: Growth sells off versus Value when rates are rising but then outperforms in
              a recession. The relationship will tell whether market is expecting higher rates or weaker economy - 
              inflation or hard landing""")
+    latest_value = round(stock_market_data['Growth/Value Ratio'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['Growth/Value Ratio'].dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date}: {latest_value}')
     fig = px.line(stock_market_data['Growth/Value Ratio'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_layout(showlegend=False, xaxis_title=None)
@@ -127,10 +181,13 @@ with differential_cols[0]:
 
 with differential_cols[1]:
     st.subheader('Large-cap/Small-cap Ratio')
-    fig = px.line(stock_market_data['Large-cap/Small-cap Ratio'].dropna())
     st.write('Note: Small-Caps sells off relative to Large-Cap going into recession')
     st.markdown('###')  # add space
     st.markdown('###')  # add space
+    latest_value = round(stock_market_data['Large-cap/Small-cap Ratio'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['Large-cap/Small-cap Ratio'].dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date}: {latest_value}')
+    fig = px.line(stock_market_data['Large-cap/Small-cap Ratio'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(dtick=0.1)
     fig.update_layout(showlegend=False, xaxis_title=None)
@@ -146,6 +203,9 @@ dxy, ten_year, ten_minus_two = st.columns(3)
 
 with dxy:
     st.subheader('US Dollar Index')
+    latest_value = round(stock_market_data['DXY'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['DXY'].dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date}: {latest_value}')
     fig = px.line(stock_market_data['DXY'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(tickprefix="$")
@@ -154,7 +214,10 @@ with dxy:
     st.plotly_chart(fig, use_container_width=True)
 
 with ten_year:
-    st.subheader('10-Year Treasury Constant Maturity')
+    st.subheader('10-Year Treasury Yield')
+    latest_value = round(fred_data['10Y'].dropna().iloc[-1], 2)
+    latest_date = fred_data['10Y'].dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date}: {latest_value}%')
     fig = px.line(fred_data['10Y'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(ticksuffix="%")
@@ -163,7 +226,10 @@ with ten_year:
     st.plotly_chart(fig, use_container_width=True)
 
 with ten_minus_two:
-    st.subheader('10-Year Minus 2-Year Spread')
+    st.subheader('10Y - 2Y Spread')
+    latest_value = round(fred_data['10Y-2Y'].dropna().iloc[-1], 2)
+    latest_date = fred_data['10Y-2Y'].dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date}: {latest_value}%')
     fig = px.line(fred_data['10Y-2Y'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_yaxes(ticksuffix="%")
@@ -177,6 +243,9 @@ vix, put_call_ratio = st.columns(2)
 
 with vix:
     st.subheader('Volatility Index (VIX)')
+    latest_value = round(stock_market_data['VIX'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['VIX'].dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date}: {latest_value}')
     fig = px.line(stock_market_data['VIX'].dropna())
     fig.update_traces(line=dict(color="#5218fa"))
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title='Spread')
@@ -184,7 +253,11 @@ with vix:
     st.plotly_chart(fig, use_container_width=True)
 
 with put_call_ratio:
-    st.subheader('10-Day Average Put/Call Ratio (Volume)')
+    st.subheader('Put/Call Ratio (Volume)')
+    latest_value_10_day = round(pcr_data['10-Day Volume'].dropna().iloc[-1], 2)
+    latest_value_30_day = round(pcr_data['30-Day Volume'].dropna().iloc[-1], 2)
+    latest_date = pcr_data.dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date} - 10-Day: {latest_value_10_day} | 30-Day: {latest_value_30_day}')
     fig = px.line(pcr_data, color_discrete_sequence=SYNCRACY_COLORS)
     fig.update_layout(xaxis_title=None, yaxis_title='Put/Call Ratio')
     fig.update_layout(legend=dict(title=None,
@@ -204,6 +277,11 @@ m2 = fred_data['M2'].to_frame(name='M2').join(stock_market_data['S&P 500'],
 
 with liquidity_col[0]:
     st.subheader('S&P 500 vs M2 (YoY%)')
+    latest_value_snp = round(m2['S&P 500'].dropna().iloc[-1], 2)
+    latest_value_m2 = round(m2['M2'].dropna().iloc[-1], 2)
+    latest_date = m2.dropna().index[-1].strftime('%Y-%m-%d')
+    st.write(f'Latest value as of {latest_date} - S&P 500:{latest_value_snp}% | M2:{latest_value_m2}%')
+
     main_fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     fig_snp = px.line(m2['S&P 500'])

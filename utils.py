@@ -1,5 +1,8 @@
 import asyncio
 from datetime import datetime
+from random import choice
+
+import requests
 import yfinance as yf
 import pandas as pd
 from openbb_terminal.sdk import openbb
@@ -103,18 +106,18 @@ def pull_fred_data():
     return fred_data
 
 
-def pull_pcr_data(start_date='2021-01-01', rolling=10):
+def pull_pcr_data(start_date='2019-01-01'):
     """
     pull put/call ratio data from openbb
     :return: pandas dataframe
     """
     pcr_data = pd.DataFrame()
-    windows = [30, 60, 90]
+    windows = [10, 30]
     for w in windows:
         pcr_tmp = openbb.stocks.options.pcr('SPY', window=w, start_date=start_date)
         pcr_tmp.columns = [f'{w}-Day Volume']
         pcr_data = pcr_data.join(pcr_tmp, how='outer')
-    return pcr_data.rolling(rolling).mean().dropna()
+    return pcr_data.dropna()
 
 
 # def pull_fred_data_async(ticker_map):
@@ -196,3 +199,50 @@ def add_recession_periods(fig, data):
                 line_width=0,
             )
     return fig
+
+
+def fear_greed_data() -> pd.DataFrame:
+    """
+    This is very informational
+    Takes in url and start date, write something something
+    """
+    BASE_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+    START_DATE = '2021-01-01'
+
+    USER_AGENTS = [
+        # Chrome on Windows 10
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
+        # Chrome on macOS
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
+        # Chrome on Linux
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
+        # Firefox on Windows
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0",
+        # Firefox on Macos
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 12.4; rv:100.0) Gecko/20100101 Firefox/100.0",
+    ]
+    user_agent = choice(USER_AGENTS)
+    headers = {
+        "User-Agent": user_agent,
+    }
+    r = requests.get("{}/{}".format(BASE_URL, START_DATE), headers=headers)
+    data = r.json()
+
+    fear_greed_index = pd.DataFrame(data['fear_and_greed_historical']['data'])
+    fear_greed_index['x'] = pd.to_datetime(fear_greed_index['x'] // 1000, unit='s').dt.strftime('%Y-%m-%d')
+    fear_greed_index = fear_greed_index.rename(columns={'x': 'date', 'y': 'fear_metric'})
+
+    fear_greed_index.set_index('date', inplace=True)
+
+    return fear_greed_index.drop_duplicates()
+
+
+def fix_date_for_psycho_url(number):
+    """
+    Fix date for psycho url
+    :param number: int
+    :return: str
+    """
+    if number < 10:
+        return f'0{number}'
+    return str(number)
