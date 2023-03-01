@@ -112,7 +112,7 @@ def pull_pcr_data(start_date='2019-01-01'):
     :return: pandas dataframe
     """
     pcr_data = pd.DataFrame()
-    windows = [10, 30]
+    windows = [10]
     for w in windows:
         pcr_tmp = openbb.stocks.options.pcr('SPY', window=w, start_date=start_date)
         pcr_tmp.columns = [f'{w}-Day Volume']
