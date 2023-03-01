@@ -259,12 +259,10 @@ with vix:
 with put_call_ratio:
     st.subheader('Put/Call Ratio (Volume)')
     latest_value_10_day = round(pcr_data['10-Day Volume'].dropna().iloc[-1], 2)
-    latest_value_30_day = round(pcr_data['30-Day Volume'].dropna().iloc[-1], 2)
     average_10_day = round(pcr_data['10-Day Volume'].dropna().tail(10).mean(), 2)
-    average_30_day = round(pcr_data['30-Day Volume'].dropna().tail(10).mean(), 2)
     latest_date = pcr_data.dropna().index[-1].strftime('%Y-%m-%d')
-    st.write(f'Latest value as of {latest_date} - 10-Day: {latest_value_10_day} | 30-Day: {latest_value_30_day}')
-    st.write(f'10 Day Average Values - 10-Day: {average_10_day} | 30-Day: {average_30_day}')
+    st.write(f'Latest value as of {latest_date} - 10-Day: {latest_value_10_day}')
+    st.write(f'10 Day Average Values - 10-Day: {average_10_day}')
     fig = px.line(pcr_data, color_discrete_sequence=SYNCRACY_COLORS)
     fig.update_layout(xaxis_title=None, yaxis_title='Put/Call Ratio')
     fig.update_layout(legend=dict(title=None,
