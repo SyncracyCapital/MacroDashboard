@@ -6,6 +6,7 @@ import requests
 import yfinance as yf
 import pandas as pd
 from openbb_terminal.sdk import openbb
+import streamlit as st
 
 from fredapi import Fred
 
@@ -14,11 +15,15 @@ fred = Fred(api_key='6a118a0ce0c76a5a1d1ad052a65162d6')
 
 def big_number_formatter(x):
     """The two args are the value and tick position."""
-    formatter_thresholds = 1_000_000_000
-    if x < formatter_thresholds:
+    formatter_thresholds_billion = 1_000_000_000
+    formatter_thresholds_trillion = 1_000_000_000_000
+
+    if x < formatter_thresholds_billion:
         return '${:1.1f}M'.format(x * 1e-6)
-    else:
+    elif x < formatter_thresholds_trillion:
         return '${:1.1f}B'.format(x * 1e-9)
+    else:
+        return '${:1.1f}T'.format(x * 1e-12)
 
 
 def highlight_percent_returns(cell):
@@ -41,23 +46,22 @@ def compute_returns(col):
     latest_price = col.iloc[-1]
     previous_close = col.iloc[-2]
     week_ago_close = col.iloc[-7]
-    begining_close = col.iloc[-30]
+    beginning_close = col.iloc[-30]
 
     last_day_return = (latest_price / previous_close - 1) * 100
     seven_day_return = (latest_price / week_ago_close - 1) * 100
-    thirty_day_return = (latest_price / begining_close - 1) * 100
+    thirty_day_return = (latest_price / beginning_close - 1) * 100
 
     return [latest_price, last_day_return, seven_day_return, thirty_day_return]
 
 
-def compute_yf_data_returns(yf_data):
+def compute_yf_data_returns(yf_data, col_names):
     """
     Compute returns for a given column
     :param yf_data: pandas dataframe
+    :param col_names: list of column names
     :return: pandas dataframe
     """
-    col_names = ['NASDAQ', 'S&P 500', 'Dow Jones', 'FTSE (UK)', 'Nikkei (JPY)', 'ASX 200', 'Russell 3000 Growth',
-                 'Russell 3000 Value', 'Russell 1000 Large-Cap', 'Russell 2000 Small-Cap', 'ARKK Innovation ETF']
     window = 120
     indices_adj_close = yf_data[col_names]
     returns = indices_adj_close.apply(compute_returns, axis=0).T
@@ -76,6 +80,7 @@ async def fred_series_async(series, name):
     return fred.get_series(series).fillna(method='ffill').to_frame(name=name)
 
 
+@st.cache(persist=True, show_spinner=False)
 def pull_yf_data(ticker_map):
     """
     pull data from yahoo finance
@@ -96,6 +101,7 @@ def pull_yf_data(ticker_map):
     return stock_market_data
 
 
+@st.cache(persist=True, show_spinner=False)
 def pull_fred_data():
     fred_data = pd.DataFrame()
     series_fred = ['DGS10', 'T10Y2Y', 'M2SL']
@@ -106,6 +112,25 @@ def pull_fred_data():
     return fred_data
 
 
+@st.cache(persist=True, show_spinner=False)
+def liquidity_condition_index():
+    """
+    Compute liquidity condition index
+    :return: pandas series
+    """
+    fed_balance_sheet = fred.get_series('WALCL').to_frame(name='FedBal') * 1_000_000  # scale to trillions
+    rrp_balance = fred.get_series('RRPONTSYD').to_frame(name='RRP') * 1_000_000_000  # scale to trillions
+    tga = fred.get_series('WTREGEN').to_frame(name='TGA') * 1_000_000_000  # scale to trillions
+
+    usd_liquidity_index = fed_balance_sheet.join(rrp_balance, how='outer')
+    usd_liquidity_index = usd_liquidity_index.join(tga, how='outer').ffill().dropna()
+    usd_liquidity_index['USD Liquidity Index'] = usd_liquidity_index['FedBal'] - usd_liquidity_index['RRP'] - \
+                                                 usd_liquidity_index['TGA']
+
+    return usd_liquidity_index
+
+
+@st.cache(persist=True, show_spinner=False)
 def pull_pcr_data(start_date='2019-01-01'):
     """
     pull put/call ratio data from openbb
@@ -201,6 +226,7 @@ def add_recession_periods(fig, data):
     return fig
 
 
+@st.cache(persist=True, show_spinner=False)
 def fear_greed_data() -> pd.DataFrame:
     """
     This is very informational
@@ -246,3 +272,19 @@ def fix_date_for_psycho_url(number):
     if number < 10:
         return f'0{number}'
     return str(number)
+
+
+def compute_rolling_averages(data, col_name, averages):
+    """
+    Compute rolling averages
+    :param data: pandas dataframe
+    :param col_name: column name
+    :param averages: list of averages
+    :return: pandas dataframe
+    """
+    if not isinstance(data, pd.DataFrame):
+        data = data.to_frame(name=col_name)
+
+    for average in averages:
+        data[f'{average}-Day MA'] = data[col_name].rolling(average).mean()
+    return data
