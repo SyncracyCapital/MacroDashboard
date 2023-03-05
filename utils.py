@@ -283,17 +283,47 @@ def compute_rolling_averages(data, col_name, averages):
     return data
 
 
-def compute_rsi(data, col_name, periods):
+def rsi_calculation(df, period, ema=True):
+    """
+    Calculate RSI
+    :param df: pandas dataframe
+    :param period: int
+    :param ema: bool
+    :return: pandas dataframe
+    """
+    close_delta = df.diff()
+
+    # Make two series: one for lower closes and one for higher closes
+    up = close_delta.clip(lower=0)
+    down = -1 * close_delta.clip(upper=0)
+
+    # Calculate RSI using EMA or SMA (default is EMA)
+    if ema:
+        # Use exponential moving average
+        ma_up = up.ewm(com=period - 1, adjust=True, min_periods=period).mean()
+        ma_down = down.ewm(com=period - 1, adjust=True, min_periods=period).mean()
+    else:
+        # Use simple moving average
+        ma_up = up.rolling(window=period, adjust=False).mean()
+        ma_down = down.rolling(window=period, adjust=False).mean()
+
+    rsi = ma_up / ma_down
+    rsi = 100 - (100 / (1 + rsi))
+    return rsi
+
+
+def compute_rsi(data, col_name, periods, ema=True):
     """
     Compute RSI
     :param data: pandas dataframe
     :param col_name: column name
     :param periods: list of periods
+    :param ema: bool
     :return: pandas dataframe
     """
     if not isinstance(data, pd.DataFrame):
         data = data.to_frame(name=col_name)
 
     for period in periods:
-        data[f'{period}-Day RSI'] = ta.RSI(data[col_name], timeperiod=period)
+        data[f'{period}-Day RSI'] = rsi_calculation(data[col_name], period, ema)
     return data[[f'{period}-Day RSI' for period in periods]]
