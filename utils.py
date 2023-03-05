@@ -8,6 +8,11 @@ import pandas as pd
 from openbb_terminal.sdk import openbb
 import streamlit as st
 
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+import talib as ta
+
 from fredapi import Fred
 
 fred = Fred(api_key='6a118a0ce0c76a5a1d1ad052a65162d6')
@@ -145,18 +150,6 @@ def pull_pcr_data(start_date='2019-01-01'):
     return pcr_data.dropna()
 
 
-# def pull_fred_data_async(ticker_map):
-#     """
-#     pull data from fred asynchronously
-#     :param ticker_map: dictionary of tickers
-#     :return: pandas dataframe
-#     """
-#     tasks = [asyncio.create_task(fred_series_async(s_fred, s_name)) for s_fred, s_name in ticker_map.items()]
-#     dataframes = await asyncio.gather(*tasks)
-#     fred_data = pd.concat(dataframes, axis=1)
-#     return fred_data
-
-
 async def get_fast_info(future_ticker):
     """
     Get fast info for a given ticker
@@ -288,3 +281,19 @@ def compute_rolling_averages(data, col_name, averages):
     for average in averages:
         data[f'{average}-Day MA'] = data[col_name].rolling(average).mean()
     return data
+
+
+def compute_rsi(data, col_name, periods):
+    """
+    Compute RSI
+    :param data: pandas dataframe
+    :param col_name: column name
+    :param periods: list of periods
+    :return: pandas dataframe
+    """
+    if not isinstance(data, pd.DataFrame):
+        data = data.to_frame(name=col_name)
+
+    for period in periods:
+        data[f'{period}-Day RSI'] = ta.RSI(data[col_name], timeperiod=period)
+    return data[[f'{period}-Day RSI' for period in periods]]
