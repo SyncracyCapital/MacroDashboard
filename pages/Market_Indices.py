@@ -8,7 +8,6 @@ from plotly.subplots import make_subplots
 from Market_Overview import yf_tickers_to_names_map
 from utils import pull_yf_data, add_recession_periods, compute_rolling_averages, compute_rsi
 
-import plotly.express as px
 
 SYNCRACY_COLORS = ['#5218F8', '#BE18F0', '#F018B6',
                    '#F0184A', '#F05218', '#F0BE18']

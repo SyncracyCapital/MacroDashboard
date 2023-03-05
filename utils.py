@@ -8,11 +8,6 @@ import pandas as pd
 from openbb_terminal.sdk import openbb
 import streamlit as st
 
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
-import talib as ta
-
 from fredapi import Fred
 
 fred = Fred(api_key='6a118a0ce0c76a5a1d1ad052a65162d6')
