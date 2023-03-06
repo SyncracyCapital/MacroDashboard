@@ -8,7 +8,6 @@ from plotly.subplots import make_subplots
 from Market_Overview import yf_tickers_to_names_map
 from utils import pull_yf_data, add_recession_periods, compute_rolling_averages, compute_rsi
 
-
 SYNCRACY_COLORS = ['#5218F8', '#BE18F0', '#F018B6',
                    '#F0184A', '#F05218', '#F0BE18']
 
@@ -26,9 +25,6 @@ snp_chart, nasdaq_chart = st.columns(2)
 
 with snp_chart:
     st.subheader('S&P 500')
-    latest_value = round(stock_market_data['S&P 500'].dropna().iloc[-1], 2)
-    latest_date = stock_market_data['S&P 500'].dropna().index[-1].strftime('%Y-%m-%d')
-    st.write(f'Latest value as of {latest_date}: ${latest_value}')
 
     # Compute moving averages and RSI
     data_with_moving_averages = compute_rolling_averages(stock_market_data['S&P 500'].dropna(),
@@ -37,6 +33,13 @@ with snp_chart:
     data_with_rsi = compute_rsi(data_with_moving_averages['S&P 500'], col_name='S&P 500',
                                 periods=[7, 30])
 
+    latest_value = round(stock_market_data['S&P 500'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['S&P 500'].dropna().index[-1].strftime('%Y-%m-%d')
+
+    latest_rsi_values = data_with_rsi.iloc[-1].round(2).to_dict()
+
+    st.write(f'Latest value as of {latest_date}: ${latest_value}')
+    st.write(f'Latest RSI values - 7-day: {latest_rsi_values["7-Day RSI"]} 30-day: {latest_rsi_values["30-Day RSI"]}')
     # Create subplots
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.6, 0.4],
                         vertical_spacing=0.05)
@@ -104,9 +107,6 @@ with snp_chart:
 
 with nasdaq_chart:
     st.subheader('NASDAQ')
-    latest_value = round(stock_market_data['NASDAQ'].dropna().iloc[-1], 2)
-    latest_date = stock_market_data['NASDAQ'].dropna().index[-1].strftime('%Y-%m-%d')
-    st.write(f'Latest value as of {latest_date}: ${latest_value}')
 
     # Compute moving averages and RSI
     data_with_moving_averages = compute_rolling_averages(stock_market_data['NASDAQ'].dropna(),
@@ -114,6 +114,14 @@ with nasdaq_chart:
 
     data_with_rsi = compute_rsi(data_with_moving_averages['NASDAQ'], col_name='NASDAQ',
                                 periods=[7, 30])
+
+    latest_value = round(stock_market_data['NASDAQ'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['NASDAQ'].dropna().index[-1].strftime('%Y-%m-%d')
+
+    latest_rsi_values = data_with_rsi.iloc[-1].round(2).to_dict()
+
+    st.write(f'Latest value as of {latest_date}: ${latest_value}')
+    st.write(f'Latest RSI values - 7-day: {latest_rsi_values["7-Day RSI"]} 30-day: {latest_rsi_values["30-Day RSI"]}')
 
     # Create subplots
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.6, 0.4],
@@ -181,7 +189,6 @@ with nasdaq_chart:
 
     st.plotly_chart(fig, use_container_width=True)
 
-
 # Create some space between the charts
 st.markdown('#')
 
@@ -189,13 +196,6 @@ vix, dxy = st.columns(2)
 
 with vix:
     st.subheader('Volatility Index (VIX)')
-    latest_value = round(stock_market_data['VIX'].dropna().iloc[-1], 2)
-    latest_date = stock_market_data['VIX'].dropna().index[-1].strftime('%Y-%m-%d')
-    average_value = round(stock_market_data['VIX'].dropna().mean(), 2)
-    min_value = round(stock_market_data['VIX'].dropna().min(), 2)
-    max_value = round(stock_market_data['VIX'].dropna().max(), 2)
-    st.write(f'Latest value as of {latest_date}: {latest_value}')
-    st.write(f'Average Value: {average_value}, Min value: {min_value}, Max value: {max_value}')
 
     # Compute moving averages and RSI
     data_with_moving_averages = compute_rolling_averages(stock_market_data['VIX'].dropna(),
@@ -203,6 +203,18 @@ with vix:
 
     data_with_rsi = compute_rsi(data_with_moving_averages['VIX'], col_name='VIX',
                                 periods=[7, 30])
+
+    latest_value = round(stock_market_data['VIX'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['VIX'].dropna().index[-1].strftime('%Y-%m-%d')
+    average_value = round(stock_market_data['VIX'].dropna().mean(), 2)
+    min_value = round(stock_market_data['VIX'].dropna().min(), 2)
+    max_value = round(stock_market_data['VIX'].dropna().max(), 2)
+
+    latest_rsi_values = data_with_rsi.iloc[-1].round(2).to_dict()
+
+    st.write(f'Latest value as of {latest_date}: {latest_value}')
+    st.write(f'Average Value: {average_value}, Min value: {min_value}, Max value: {max_value}')
+    st.write(f'Latest RSI values - 7-day: {latest_rsi_values["7-Day RSI"]} 30-day: {latest_rsi_values["30-Day RSI"]}')
 
     # Create subplots
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.6, 0.4],
@@ -272,13 +284,6 @@ with vix:
 
 with dxy:
     st.subheader('US Dollar Index')
-    latest_value = round(stock_market_data['DXY'].dropna().iloc[-1], 2)
-    latest_date = stock_market_data['DXY'].dropna().index[-1].strftime('%Y-%m-%d')
-    average_value = round(stock_market_data['DXY'].dropna().mean(), 2)
-    min_value = round(stock_market_data['DXY'].dropna().min(), 2)
-    max_value = round(stock_market_data['DXY'].dropna().max(), 2)
-    st.write(f'Latest value as of {latest_date}: ${latest_value}')
-    st.write(f'Average Value: {average_value}, Min value: {min_value}, Max value: {max_value}')
 
     # Compute moving averages and RSI
     data_with_moving_averages = compute_rolling_averages(stock_market_data['DXY'].dropna(),
@@ -286,6 +291,18 @@ with dxy:
 
     data_with_rsi = compute_rsi(data_with_moving_averages['DXY'], col_name='DXY',
                                 periods=[7, 30])
+
+    latest_value = round(stock_market_data['DXY'].dropna().iloc[-1], 2)
+    latest_date = stock_market_data['DXY'].dropna().index[-1].strftime('%Y-%m-%d')
+    average_value = round(stock_market_data['DXY'].dropna().mean(), 2)
+    min_value = round(stock_market_data['DXY'].dropna().min(), 2)
+    max_value = round(stock_market_data['DXY'].dropna().max(), 2)
+
+    latest_rsi_values = data_with_rsi.iloc[-1].round(2).to_dict()
+
+    st.write(f'Latest value as of {latest_date}: ${latest_value}')
+    st.write(f'Average Value: {average_value}, Min value: {min_value}, Max value: {max_value}')
+    st.write(f'Latest RSI values - 7-day: {latest_rsi_values["7-Day RSI"]} 30-day: {latest_rsi_values["30-Day RSI"]}')
 
     # Create subplots
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.6, 0.4],
