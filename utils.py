@@ -80,7 +80,7 @@ async def fred_series_async(series, name):
     return fred.get_series(series).fillna(method='ffill').to_frame(name=name)
 
 
-@st.cache(persist=True, show_spinner=False)
+@st.cache(ttl=60*5, show_spinner=False)
 def pull_yf_data(ticker_map):
     """
     pull data from yahoo finance
@@ -101,7 +101,7 @@ def pull_yf_data(ticker_map):
     return stock_market_data
 
 
-@st.cache(persist=True, show_spinner=False)
+@st.cache(ttl=60*5, show_spinner=False)
 def pull_fred_data():
     fred_data = pd.DataFrame()
     series_fred = ['DGS10', 'T10Y2Y', 'M2SL']
@@ -112,7 +112,7 @@ def pull_fred_data():
     return fred_data
 
 
-@st.cache(persist=True, show_spinner=False)
+@st.cache(ttl=60*5, show_spinner=False)
 def liquidity_condition_index():
     """
     Compute liquidity condition index
@@ -130,7 +130,7 @@ def liquidity_condition_index():
     return usd_liquidity_index
 
 
-@st.cache(persist=True, show_spinner=False)
+@st.cache(ttl=60*5, show_spinner=False)
 def pull_pcr_data(start_date='2019-01-01'):
     """
     pull put/call ratio data from openbb
@@ -214,7 +214,7 @@ def add_recession_periods(fig, data):
     return fig
 
 
-@st.cache(persist=True, show_spinner=False)
+@st.cache(ttl=60*5, show_spinner=False)
 def fear_greed_data() -> pd.DataFrame:
     """
     This is very informational
