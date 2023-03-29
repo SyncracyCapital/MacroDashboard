@@ -47,7 +47,8 @@ month = fix_date_for_psycho_url(latest_business_day.month)
 psychological_indicators_and_volume_url = f"https://www.investors.com/wp-content/uploads/{year}/{month}/DailyPsycho_{month}{day}{year[-2:]}.pdf "
 
 st.write('#')
-st.write(f"""[Crypto Dashboard](https://syncracycapital-the-eye-of-syncracy-analytics-app-jjgobl.streamlit.app/) | 
+st.write(f"""[Crypto Dashboard](https://syncracycapital-the-eye-of-syncracy-analytics-app-vyu0j7.streamlit.app/) |
+            [Portfolio Dashboard](https://syncracycapital-portfolioanalytics-portfolio-9twh53.streamlit.app/) | 
             [Psychological Indicators and Volume]({psychological_indicators_and_volume_url})""")
 st.markdown('---')
 
