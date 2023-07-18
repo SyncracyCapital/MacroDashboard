@@ -16,54 +16,6 @@ from fredapi import Fred
 fred = Fred(api_key='6a118a0ce0c76a5a1d1ad052a65162d6')
 
 
-def get_put_call_ratio(
-    symbol: str,
-    window: int = 30,
-    start_date: Optional[str] = None,
-) -> pd.DataFrame:
-    """Gets put call ratio over last time window [Source: AlphaQuery.com]
-
-    Parameters
-    ----------
-    symbol: str
-        Ticker symbol to look for
-    window: int, optional
-        Window to consider, by default 30
-    start_date: Optional[str], optional
-        Start date to plot  (e.g., 2021-10-01), by default last 366 days
-
-    Returns
-    -------
-    pd.DataFrame
-        Put call ratio
-
-    Examples
-    --------
-    >>> from openbb_terminal.sdk import openbb
-    >>> pcr_df = openbb.stocks.options.pcr("B")
-    """
-
-    if start_date is None:
-        start_date = (datetime.now() - timedelta(days=366)).strftime("%Y-%m-%d")
-
-    url = f"https://www.alphaquery.com/data/option-statistic-chart?ticker={symbol}\
-        &perType={window}-Day&identifier=put-call-ratio-volume"
-
-    st.write(url)
-
-    r = request(url)
-    if r.status_code != 200:
-        st.write(r.status_code)
-        return pd.DataFrame()
-
-    pcr = pd.DataFrame.from_dict(r.json())
-    pcr.rename(columns={"x": "Date", "value": "PCR"}, inplace=True)
-    pcr.set_index("Date", inplace=True)
-    pcr.index = pd.to_datetime(pcr.index).tz_localize(None)
-
-    return pcr[pcr.index > start_date]
-
-
 def big_number_formatter(x):
     """The two args are the value and tick position."""
     formatter_thresholds_billion = 1_000_000_000
@@ -181,6 +133,7 @@ def liquidity_condition_index():
     return usd_liquidity_index
 
 
+@st.cache_data(ttl=60*5, show_spinner=False)
 def pull_pcr_data(start_date='2019-01-01'):
     """
     pull put/call ratio data from openbb
@@ -189,7 +142,7 @@ def pull_pcr_data(start_date='2019-01-01'):
     pcr_data = pd.DataFrame()
     windows = [10]
     for w in windows:
-        pcr_tmp = get_put_call_ratio('SPY', window=w, start_date=start_date)
+        pcr_tmp = openbb.stocks.options.pcr('SPY', window=w, start_date=start_date)
         st.dataframe(pcr_tmp)
         pcr_tmp.columns = [f'{w}-Day Volume']
         pcr_data = pcr_data.join(pcr_tmp, how='outer')
