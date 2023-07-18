@@ -53,6 +53,8 @@ def get_put_call_ratio(
             Chrome/70.0.3538.77 Safari/537.36"
     }
 
+    print(url)
+
     r = request(url, headers=headers)
     if r.status_code != 200:
         return pd.DataFrame()
