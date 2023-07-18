@@ -101,8 +101,7 @@ with st.spinner('Loading Market Data From FRED...'):
     liquidity_index_df = liquidity_condition_index()
 
 with st.spinner('Loading PCR Data From Alpha Query...'):
-    # pcr_data = pull_pcr_data()
-    pass
+    pcr_data = pull_pcr_data()
 
 with st.spinner('Loading Fear & Greed Index From CNN...'):
     fear_and_greed_df = fear_greed_data()
