@@ -100,8 +100,8 @@ with st.spinner('Loading Market Data From FRED...'):
     fred_data = pull_fred_data()
     liquidity_index_df = liquidity_condition_index()
 
-with st.spinner('Loading PCR Data From Alpha Query...'):
-    pcr_data = pull_pcr_data()
+# with st.spinner('Loading PCR Data From Alpha Query...'):
+#     pcr_data = pull_pcr_data()
 
 with st.spinner('Loading Fear & Greed Index From CNN...'):
     fear_and_greed_df = fear_greed_data()
@@ -277,31 +277,31 @@ with ten_minus_two:
 
 st.markdown('---')
 
-put_call_ratio = st.columns(1)
+# put_call_ratio = st.columns(1)
 
-with put_call_ratio[0]:
-    st.subheader('Put/Call Ratio (Volume)')
-    latest_value_10_day = round(pcr_data['10-Day Volume'].dropna().iloc[-1], 2)
-    average_10_day = round(pcr_data['10-Day Volume'].dropna().tail(10).mean(), 2)
-    latest_date = pcr_data.dropna().index[-1].strftime('%Y-%m-%d')
-    st.write(f'Latest value as of {latest_date} - 10-Day: {latest_value_10_day}')
-    st.write(f'10 Day Average Values - 10-Day: {average_10_day}')
-    fig = px.line(pcr_data, color_discrete_sequence=SYNCRACY_COLORS)
-    fig.update_layout(xaxis_title=None, yaxis_title='Put/Call Ratio')
-    fig.update_layout(legend=dict(title=None,
-                                  orientation="h",
-                                  y=1,
-                                  yanchor="bottom",
-                                  x=0.5,
-                                  xanchor="center"))
+# with put_call_ratio[0]:
+#     st.subheader('Put/Call Ratio (Volume)')
+#     latest_value_10_day = round(pcr_data['10-Day Volume'].dropna().iloc[-1], 2)
+#     average_10_day = round(pcr_data['10-Day Volume'].dropna().tail(10).mean(), 2)
+#     latest_date = pcr_data.dropna().index[-1].strftime('%Y-%m-%d')
+#     st.write(f'Latest value as of {latest_date} - 10-Day: {latest_value_10_day}')
+#     st.write(f'10 Day Average Values - 10-Day: {average_10_day}')
+#     fig = px.line(pcr_data, color_discrete_sequence=SYNCRACY_COLORS)
+#     fig.update_layout(xaxis_title=None, yaxis_title='Put/Call Ratio')
+#     fig.update_layout(legend=dict(title=None,
+#                                   orientation="h",
+#                                   y=1,
+#                                   yanchor="bottom",
+#                                   x=0.5,
+#                                   xanchor="center"))
 
-    data_subset = pcr_data.loc[zoom_in_date_start:zoom_in_date_end]
-    fig.update_xaxes(type="date", range=[zoom_in_date_start, zoom_in_date_end])
-    fig.update_yaxes(range=[data_subset.min(), data_subset.max()])
-    fig = add_recession_periods(fig, pcr_data)
-    st.plotly_chart(fig, use_container_width=True)
+#     data_subset = pcr_data.loc[zoom_in_date_start:zoom_in_date_end]
+#     fig.update_xaxes(type="date", range=[zoom_in_date_start, zoom_in_date_end])
+#     fig.update_yaxes(range=[data_subset.min(), data_subset.max()])
+#     fig = add_recession_periods(fig, pcr_data)
+#     st.plotly_chart(fig, use_container_width=True)
 
-st.markdown('---')
+# st.markdown('---')
 
 liquidity_col = st.columns(1)
 m2 = fred_data['M2'].to_frame(name='M2').join(stock_market_data['S&P 500'],
