@@ -57,6 +57,7 @@ def get_put_call_ratio(
 
     r = request(url, headers=headers)
     if r.status_code != 200:
+        st.write(r.status)
         return pd.DataFrame()
 
     pcr = pd.DataFrame.from_dict(r.json())
