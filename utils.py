@@ -140,6 +140,7 @@ def pull_pcr_data(start_date='2019-01-01'):
     windows = [10]
     for w in windows:
         pcr_tmp = openbb.stocks.options.pcr('SPY', window=w, start_date=start_date)
+        st.dataframe(pcr_tmp)
         pcr_tmp.columns = [f'{w}-Day Volume']
         pcr_data = pcr_data.join(pcr_tmp, how='outer')
     return pcr_data.dropna()
