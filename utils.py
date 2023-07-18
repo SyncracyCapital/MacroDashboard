@@ -130,7 +130,6 @@ def liquidity_condition_index():
     return usd_liquidity_index
 
 
-@st.cache_data(ttl=60*5, show_spinner=False)
 def pull_pcr_data(start_date='2019-01-01'):
     """
     pull put/call ratio data from openbb
