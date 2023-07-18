@@ -48,14 +48,10 @@ def get_put_call_ratio(
 
     url = f"https://www.alphaquery.com/data/option-statistic-chart?ticker={symbol}\
         &perType={window}-Day&identifier=put-call-ratio-volume"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) \
-            Chrome/70.0.3538.77 Safari/537.36"
-    }
 
     st.write(url)
 
-    r = request(url, headers=headers)
+    r = request(url)
     if r.status_code != 200:
         st.write(r.status_code)
         return pd.DataFrame()
