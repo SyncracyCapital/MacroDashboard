@@ -6,6 +6,8 @@ import yfinance as yf
 import plotly.express as px
 from plotly.subplots import make_subplots
 
+from openbb_terminal.sdk import openbb
+
 from utils import big_number_formatter, highlight_percent_returns, pull_yf_data, \
     pull_fred_data, compute_yf_data_returns, pull_pcr_data, add_recession_periods, fear_greed_data, \
     fix_date_for_psycho_url, liquidity_condition_index
@@ -89,6 +91,8 @@ fred_tickers_to_names_map = {'DGS10': '10Y',
 index_cols = ['NASDAQ', 'S&P 500', 'Dow Jones', 'FTSE (UK)', 'Nikkei (JPY)', 'ASX 200', 'Hang Seng (HKD)', 'DXY',
               '10Y', 'VIX', 'Russell 3000 Growth', 'Russell 3000 Value', 'Russell 1000 Large-Cap',
               'Russell 2000 Small-Cap', 'ARKK Innovation ETF']
+
+st.dataframe(openbb.stocks.options.pcr('SPY', window=10, start_date='2019-01-01'))
 
 with st.spinner('Loading Market Data From Yahoo Finance...'):
     stock_market_data = pull_yf_data(yf_tickers_to_names_map)
