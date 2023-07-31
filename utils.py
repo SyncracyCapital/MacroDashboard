@@ -5,11 +5,9 @@ from random import choice
 import requests
 import yfinance as yf
 import pandas as pd
-from openbb_terminal.sdk import openbb
 import streamlit as st
 
 from typing import Optional
-from openbb_terminal.helper_funcs import request
 
 from fredapi import Fred
 
